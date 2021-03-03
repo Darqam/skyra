@@ -4,6 +4,7 @@ import '@sapphire/plugin-i18next/register-discordjs';
 import '@sapphire/plugin-logger/register';
 import 'reflect-metadata';
 import './Canvas';
+import './Grpc';
 
 import { DEV } from '#root/config';
 import * as colorette from 'colorette';

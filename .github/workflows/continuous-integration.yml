@@ -70,7 +70,7 @@ jobs:
           path: node_modules
           key: ${{ runner.os }}-15-${{ hashFiles('**/yarn.lock') }}
       - name: Install Dependencies
-        run: yarn --ignore-scripts --frozen-lockfile
+        run: yarn --frozen-lockfile
       - name: Copy Configuration
         run: |
           pushd src &&
@@ -84,6 +84,19 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(needs.pre_ci.outputs.commit_message, '[skip ci]')"
     needs: pre_ci
+    services:
+      postgres:
+        image: postgres:12
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout Project
         uses: actions/checkout@v2
@@ -107,6 +120,20 @@ jobs:
           pushd src &&
           cp config.example.ts config.ts &&
           popd
+      - name: Run gRPC generator script
+        run: yarn scripts:grpc
+      - name: Run Skyra.Grpc
+        run: |
+          dotnet new tool-manifest
+          dotnet tool install dotnet-ef
+          dotnet tool run dotnet-ef migrations add --project services/Skyra.Database InitCreate
+          dotnet tool run dotnet-ef database update --project services/Skyra.Database
+          dotnet run --project services/Skyra.Grpc &
+          while ! nc -z localhost 5000; do
+            sleep 0.1 # wait for 1/10 of the second before check again
+          done
+        env:
+          POSTGRES_DB: test
       - name: Run tests
         run: yarn test --coverage
       - name: Store code coverage report

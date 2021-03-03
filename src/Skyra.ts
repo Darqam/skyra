@@ -3,6 +3,7 @@ import { DbSet } from '#lib/database';
 import { SkyraClient } from '#lib/SkyraClient';
 import { TOKENS } from '#root/config';
 import { helpUsagePostProcessor, rootFolder } from '#utils/constants';
+import { Store } from '@sapphire/pieces';
 import { RewriteFrames } from '@sentry/integrations';
 import * as Sentry from '@sentry/node';
 import i18next from 'i18next';
@@ -29,6 +30,9 @@ async function main() {
 	}
 
 	try {
+		// Wait for gRPC to connect
+		await Store.injectedContext.grpc.waitForReady();
+
 		// Connect to the Database
 		await DbSet.connect();
 
